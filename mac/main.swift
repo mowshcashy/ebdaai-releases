@@ -6,13 +6,14 @@ import Cocoa
 import WebKit
 import UniformTypeIdentifiers
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandlerWithReply {
     var window: NSWindow!
     var webView: WKWebView!
     var server: Process?
     var port = 3000
     var studioURL: URL { URL(string: "http://127.0.0.1:\(port)/studio")! }
     var downloadTargets: [ObjectIdentifier: URL] = [:]
+    let updater = Updater()
 
     let resources = Bundle.main.resourceURL!
     let fm = FileManager.default
@@ -24,6 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         buildWindow()
         showLoading("يشغّل إبداعي…")
         startServer()
+        updater.onChange = { [weak self] s in self?.pushUpdateState(s) }
+        updater.start()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool { true }
@@ -143,6 +146,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         config.preferences.isElementFullscreenEnabled = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.websiteDataStore = .default()
+        config.userContentController.addUserScript(WKUserScript(source: Self.bridgeJS, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "ebdaai")
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -193,6 +198,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
         add("EBDAAI", [
             item("عن EBDAAI", #selector(NSApplication.orderFrontStandardAboutPanel(_:)), ""),
+            item("التحقق من التحديثات…", #selector(checkForUpdates), ""),
             .separator(),
             item("مجلد البيانات", #selector(openDataDir), ""),
             item("سجل السيرفر", #selector(openLog), ""),
@@ -241,6 +247,79 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     @objc func openInBrowser() { NSWorkspace.shared.open(webView.url?.scheme == "http" ? webView.url! : studioURL) }
     @objc func openDataDir() { NSWorkspace.shared.open(dataDir) }
     @objc func openLog() { NSWorkspace.shared.open(logFile) }
+
+    // MARK: Bridge — window.ebdaai for the studio page: version, folder picker, in-app updates
+    // (the same shape as desktop/preload.cjs, so UpdateCard and the rest work unchanged).
+
+    static let bridgeJS = """
+    (() => {
+      if (!/^(127\\.0\\.0\\.1|localhost)$/.test(location.hostname)) return;
+      const call = (op, arg) => window.webkit.messageHandlers.ebdaai.postMessage({ op, arg: arg ?? null });
+      const subs = new Set();
+      window.__ebdaaiUpdateState = (s) => subs.forEach((f) => { try { f(s); } catch {} });
+      window.ebdaai = Object.freeze({
+        platform: "mac",
+        version: () => call("version"),
+        pickFolder: (title) => call("pickFolder", title || ""),
+        update: Object.freeze({
+          state: () => call("update", "state"),
+          check: () => call("update", "check"),
+          download: () => call("update", "download"),
+          install: () => call("update", "install"),
+          onChange: (cb) => { subs.add(cb); return () => subs.delete(cb); },
+        }),
+      });
+    })();
+    """
+
+    func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage,
+                               replyHandler: @escaping (Any?, String?) -> Void) {
+        guard isLocal(message.frameInfo.request.url) || ["127.0.0.1", "localhost"].contains(message.frameInfo.securityOrigin.host),
+              let body = message.body as? [String: Any], let op = body["op"] as? String else { replyHandler(nil, "not allowed"); return }
+        let arg = body["arg"] as? String
+        switch (op, arg) {
+        case ("version", _): replyHandler(updater.current, nil)
+        case ("pickFolder", _):
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
+            panel.message = arg ?? ""; panel.prompt = "اختيار"
+            panel.beginSheetModal(for: window) { r in replyHandler(r == .OK ? panel.url?.path : nil, nil) }
+        case ("update", "state"): replyHandler(updater.state, nil)
+        case ("update", "check"): updater.check(quiet: false) { replyHandler($0, nil) }
+        case ("update", "download"): updater.download { replyHandler($0, nil) }
+        case ("update", "install"): updater.install { replyHandler($0, nil) }
+        default: replyHandler(nil, "unknown: \(op)")
+        }
+    }
+
+    func pushUpdateState(_ s: [String: Any]) {
+        guard isLocal(webView.url), webView.url?.scheme == "http",
+              let json = try? JSONSerialization.data(withJSONObject: s), let text = String(data: json, encoding: .utf8) else { return }
+        webView.evaluateJavaScript("window.__ebdaaiUpdateState && window.__ebdaaiUpdateState(\(text))")
+    }
+
+    /** From the menu: say so when there's nothing new; otherwise offer it right away. */
+    @objc func checkForUpdates() {
+        updater.check(quiet: false) { [weak self] s in
+            guard let self else { return }
+            let a = NSAlert()
+            switch s["status"] as? String {
+            case "available":
+                let v = (s["available"] as? [String: Any])?["version"] as? String ?? ""
+                a.messageText = "فيه تحديث جديد — \(v)"
+                a.informativeText = "عندك \(self.updater.current)."
+                a.addButton(withTitle: "حدّث الحين"); a.addButton(withTitle: "بعدين")
+                if a.runModal() == .alertFirstButtonReturn { self.updater.download { if $0["status"] as? String == "ready" { self.updater.install() } } }
+            case "latest", "ready", "downloading":
+                a.messageText = s["status"] as? String == "latest" ? "عندك آخر نسخة (\(self.updater.current))" : "التحديث قاعد يتجهّز…"
+                a.runModal()
+            default:
+                a.messageText = "ما قدر يتحقق من التحديثات"
+                a.informativeText = s["error"] as? String ?? ""
+                a.runModal()
+            }
+        }
+    }
 
     // MARK: Navigation — the studio stays in the window, everything else opens in the browser
 

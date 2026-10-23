@@ -2,13 +2,17 @@
 # Builds EBDAAI.app and EBDAAI-macOS-<version>.dmg from a published macOS server release.
 #   ./build.sh            → the latest release
 #   ./build.sh 1.0.33     → a specific version
-# Output: mac/dist/
+#   ./build.sh 1.0.33 --upload   → also attach the DMG and latest-mac.yml to that release
+# Output: mac/dist/  (EBDAAI.app, the DMG, and latest-mac.yml — the feed the Mac app's updater reads)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO=mowshcashy/ebdaai-releases
 NODE_LINE=latest-v22.x
-VERSION="${1:-$(gh release view -R "$REPO" --json tagName -q .tagName | sed 's/^v//')}"
+UPLOAD=0
+ARGS=()
+for a in "$@"; do [ "$a" = "--upload" ] && UPLOAD=1 || ARGS+=("$a"); done
+VERSION="${ARGS[0]:-$(gh release view -R "$REPO" --json tagName -q .tagName | sed 's/^v//')}"
 WORK="$HERE/.build"
 DIST="$HERE/dist"
 APP="$DIST/EBDAAI.app"
@@ -33,7 +37,7 @@ if [ ! -d "$NODE_DIR" ]; then
 fi
 
 # The newest CommandLineTools SDK can be ahead of its own swiftc; prefer the one that matches.
-SDK=$(ls -d /Library/Developer/CommandLineTools/SDKs/MacOSX26.*.sdk 2>/dev/null | tail -1); SDK=${SDK:-$(xcrun --show-sdk-path)}
+SDK=$(ls -d /Library/Developer/CommandLineTools/SDKs/MacOSX26.*.sdk 2>/dev/null | tail -1 || true); SDK=${SDK:-$(xcrun --show-sdk-path)}
 
 # 3. Icon from the logo, with its animation frozen at the finished frame
 ICONSET="$WORK/EBDAAI.iconset"
@@ -51,7 +55,7 @@ fi
 
 # 4. The app bundle
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/node/bin"
-swiftc -O -sdk "$SDK" -target arm64-apple-macos13 -o "$APP/Contents/MacOS/EBDAAI" "$HERE/EBDAAI.swift"
+swiftc -O -sdk "$SDK" -target arm64-apple-macos13 -o "$APP/Contents/MacOS/EBDAAI" "$HERE/main.swift" "$HERE/Updater.swift"
 cp "$NODE_DIR/bin/node" "$APP/Contents/Resources/node/bin/node"
 cp "$NODE_DIR/LICENSE" "$APP/Contents/Resources/node/LICENSE"
 cp -R "$SRV/app" "$APP/Contents/Resources/app"
@@ -69,5 +73,22 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "EBDAAI $VERSION" -srcfolder "$STAGE" -fs HFS+ -format ULMO -ov "$DMG" >/dev/null
 
+# 6. The update feed: same fields as electron-builder's latest.yml
+FEED="$DIST/latest-mac.yml"
+{
+  echo "version: $VERSION"
+  echo "path: $(basename "$DMG")"
+  echo "sha512: $(openssl dgst -sha512 -binary "$DMG" | base64)"
+  echo "releaseDate: '$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
+  echo "releaseNotes: |"
+  gh release view "v$VERSION" -R "$REPO" --json body -q .body 2>/dev/null \
+    | grep -E '^- ' | grep -v 'تطبيق للماك' | head -6 | sed 's/^/  /'
+} > "$FEED"
+
 du -sh "$APP" "$DMG"
 echo "✓ $DMG"
+
+if [ "$UPLOAD" = 1 ]; then
+  gh release upload "v$VERSION" -R "$REPO" --clobber "$DMG" "$FEED"
+  echo "✓ uploaded to v$VERSION"
+fi
