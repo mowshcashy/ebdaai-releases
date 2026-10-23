@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/mowshcashy/ebdaai-releases/releases/latest"><img alt="آخر نسخة" src="https://img.shields.io/github/v/release/mowshcashy/ebdaai-releases?label=%D8%A2%D8%AE%D8%B1%20%D9%86%D8%B3%D8%AE%D8%A9&color=1E6BFF&style=for-the-badge"></a>
   <a href="https://github.com/mowshcashy/ebdaai-releases/releases/latest"><img alt="حمّل للويندوز" src="https://img.shields.io/badge/%D8%AD%D9%85%D9%91%D9%84-Windows-0B0D12?style=for-the-badge&logo=windows&logoColor=white"></a>
-  <a href="https://github.com/mowshcashy/ebdaai-releases/releases/latest"><img alt="macOS" src="https://img.shields.io/badge/macOS-%D8%B3%D9%8A%D8%B1%D9%81%D8%B1%20%D9%85%D8%AD%D9%84%D9%8A-0B0D12?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/mowshcashy/ebdaai-releases/releases/latest"><img alt="macOS" src="https://img.shields.io/badge/macOS-%D8%AA%D8%B7%D8%A8%D9%8A%D9%82-0B0D12?style=for-the-badge&logo=apple&logoColor=white"></a>
 </p>
 
 <h3 align="center" dir="rtl">استوديو ذكاء اصطناعي كامل… يشتغل على جهازك أنت.</h3>
@@ -158,8 +158,15 @@
 2. أول تشغيل: يجهّز المحرك (ComfyUI) لحاله، واختار «العقل» والموديلات المقترحة — دقيقتين وتبدأ.
 3. **التحديثات تلقائية:** التطبيق يفحص كل كم ساعة، ولما تنزل نسخة جديدة تطلع لك بطاقة «حدّث الحين».
 
-### macOS — سيرفر محلي
-على الماك إبداعي يشتغل كسيرفر وتفتحه بالمتصفح.
+### macOS — تطبيق (Apple Silicon)
+1. ثبّت **ComfyUI** (مثلاً [Comfy Desktop](https://www.comfy.org/download)) وشغّله، و **Ollama** اختياري.
+2. حمّل **`EBDAAI-macOS-<النسخة>.dmg`** من [آخر نسخة](https://github.com/mowshcashy/ebdaai-releases/releases/latest)، افتحه، واسحب EBDAAI لمجلد Applications.
+3. أول مرة لو قال الماك إنه ما يقدر يتحقق منه: الإعدادات ← الخصوصية والأمان ← «افتح على أي حال».
+
+ما يحتاج Node.js — موجود داخل التطبيق. لأجهزة M1 وما بعده، وmacOS 13 أو أحدث. التحديثات للحين يدوية: حمّل الـDMG الجديد.
+
+### macOS — سيرفر محلي (بديل)
+لو تبي تشغّله بالمتصفح بدل التطبيق:
 1. ثبّت **Node.js 20+** و **ComfyUI** (مثلاً Comfy Desktop)، و **Ollama** اختياري.
 2. حمّل `EBDAAI-macOS-server.tar.gz`، فكّه، واضغط مرتين على `start.command` (أول مرة: كلك يمين ← Open).
 3. ينفتح المتصفح على `http://127.0.0.1:3000/studio`.
@@ -216,7 +223,8 @@
 - **Video, Image, 3D, Manga, Podcast, Templates, Model Hub** — with multiple model folders across drives.
 
 **Windows:** download `EBDAAI-Setup.exe` from the [latest release](https://github.com/mowshcashy/ebdaai-releases/releases/latest) — updates install from inside the app.
-**macOS:** a local server (`EBDAAI-macOS-server.tar.gz`): Node.js 20+, ComfyUI running, then `start.command`.
+**macOS (Apple Silicon, macOS 13+):** download `EBDAAI-macOS-<version>.dmg`, drag EBDAAI to Applications, and keep ComfyUI running (e.g. Comfy Desktop). Node.js is built in. The app isn't notarized yet — the first time, allow it in System Settings → Privacy & Security → Open Anyway. Updates are manual for now.
+Or run the local server (`EBDAAI-macOS-server.tar.gz`): Node.js 20+, ComfyUI running, then `start.command`.
 </details>
 
 ---
