@@ -163,7 +163,7 @@
 2. حمّل **`EBDAAI-macOS-<النسخة>.dmg`** من [آخر نسخة](https://github.com/mowshcashy/ebdaai-releases/releases/latest)، افتحه، واسحب EBDAAI لمجلد Applications.
 3. أول مرة لو قال الماك إنه ما يقدر يتحقق منه: الإعدادات ← الخصوصية والأمان ← «افتح على أي حال».
 
-ما يحتاج Node.js — موجود داخل التطبيق. لأجهزة M1 وما بعده، وmacOS 13 أو أحدث. التحديثات للحين يدوية: حمّل الـDMG الجديد.
+ما يحتاج Node.js — موجود داخل التطبيق. لأجهزة M1 وما بعده، وmacOS 13 أو أحدث. **التحديثات تلقائية:** لما تنزل نسخة جديدة تطلع لك بطاقة «حدّث الحين» داخل التطبيق (أو من القائمة: EBDAAI ▸ التحقق من التحديثات).
 
 ### macOS — سيرفر محلي (بديل)
 لو تبي تشغّله بالمتصفح بدل التطبيق:
@@ -223,7 +223,7 @@
 - **Video, Image, 3D, Manga, Podcast, Templates, Model Hub** — with multiple model folders across drives.
 
 **Windows:** download `EBDAAI-Setup.exe` from the [latest release](https://github.com/mowshcashy/ebdaai-releases/releases/latest) — updates install from inside the app.
-**macOS (Apple Silicon, macOS 13+):** download `EBDAAI-macOS-<version>.dmg`, drag EBDAAI to Applications, and keep ComfyUI running (e.g. Comfy Desktop). Node.js is built in. The app isn't notarized yet — the first time, allow it in System Settings → Privacy & Security → Open Anyway. Updates are manual for now.
+**macOS (Apple Silicon, macOS 13+):** download `EBDAAI-macOS-<version>.dmg`, drag EBDAAI to Applications, and keep ComfyUI running (e.g. Comfy Desktop). Node.js is built in. The app isn't notarized yet — the first time, allow it in System Settings → Privacy & Security → Open Anyway. Updates install from inside the app.
 Or run the local server (`EBDAAI-macOS-server.tar.gz`): Node.js 20+, ComfyUI running, then `start.command`.
 </details>
 

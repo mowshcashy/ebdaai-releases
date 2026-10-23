@@ -43,7 +43,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     // MARK: Server
 
     func startServer() {
-        port = freePort(from: 3000)
+        // The same ports as the Windows app (47321…), where the After Effects panel looks for EBDAAI.
+        port = freePort(from: 47321)
         try? fm.createDirectory(at: dataDir, withIntermediateDirectories: true)
         try? fm.createDirectory(at: logFile.deletingLastPathComponent(), withIntermediateDirectories: true)
         fm.createFile(atPath: logFile.path, contents: nil)

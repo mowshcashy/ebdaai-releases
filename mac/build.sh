@@ -20,9 +20,11 @@ APP="$DIST/EBDAAI.app"
 echo "▸ EBDAAI $VERSION for macOS (arm64)"
 rm -rf "$APP" && mkdir -p "$WORK" "$DIST"
 
-# 1. Server package from the release
+# 1. Server package from the release (or SERVER_TGZ=<a local EBDAAI-macOS-server-*.tar.gz>)
 SRV="$WORK/EBDAAI-macOS-server-$VERSION"
-if [ ! -d "$SRV" ]; then
+if [ -n "${SERVER_TGZ:-}" ]; then
+  rm -rf "$SRV" && tar -xzf "$SERVER_TGZ" -C "$WORK"
+elif [ ! -d "$SRV" ]; then
   gh release download "v$VERSION" -R "$REPO" -p "EBDAAI-macOS-server-$VERSION.tar.gz" -D "$WORK" --clobber
   tar -xzf "$WORK/EBDAAI-macOS-server-$VERSION.tar.gz" -C "$WORK"
 fi
